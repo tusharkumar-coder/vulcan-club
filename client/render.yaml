@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: vulcan-club-client
+    runtime: node
+    rootDir: client
+    region: singapore
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_SITE_URL
+        sync: false
+      - key: ADMIN_SITE_URL
+        sync: false
+      - key: NEXT_PUBLIC_API_BASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: USE_DEMO_DATA
+        value: "false"
+      - key: NEXT_PUBLIC_CLUB_EMAIL
+        value: ""
+      - key: NEXT_PUBLIC_INSTAGRAM_URL
+        value: ""
+      - key: NEXT_PUBLIC_LINKEDIN_URL
+        value: ""
+      - key: NEXT_PUBLIC_GITHUB_URL
+        value: ""

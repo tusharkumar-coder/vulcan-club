@@ -1,0 +1,17 @@
+{
+  "name": "vulcan-club-api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node server.mjs",
+    "start": "node server.mjs"
+  },
+  "engines": {
+    "node": ">=20.9"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.117.3",
+    "zod": "^4.3.6"
+  }
+}

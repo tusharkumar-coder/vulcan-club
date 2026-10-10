@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: vulcan-club-api
+    runtime: node
+    rootDir: backend
+    region: singapore   # closest to India on Render's free tier
+    plan: free
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Set the following in the Render dashboard — do NOT commit real values here:
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      # Comma-separated public origins of the deployed client and admin apps.
+      - key: FRONTEND_ORIGINS
+        sync: false

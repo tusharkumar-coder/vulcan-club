@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#10110f" />
+    <title>Vulcan Club · Admin</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="/config.js"></script>
+    <script type="module" src="/app.js"></script>
+  </head>
+  <body>
+    <div class="frame">
+      <aside class="sidebar">
+        <a class="brand" href="#"><span class="mark">V</span><span>VULCAN<small>ADMIN CONSOLE</small></span></a>
+        <div class="sidebar-label">WORKSPACE</div>
+        <nav id="navigation" aria-label="Admin data sections"></nav>
+        <div class="sidebar-bottom"><span class="api-dot" id="connection-dot"></span><span id="connection-label">Connecting to API</span></div>
+      </aside>
+      <main class="main">
+        <header class="header"><div><span class="eyebrow">MIRAI SCHOOL OF TECHNOLOGY</span><h1>Organizer workspace</h1></div><div id="account" class="account"></div></header>
+        <section id="login-panel" class="login-wrap" hidden>
+          <form id="login-form" class="login-card">
+            <span class="eyebrow">SECURE ACCESS</span><h2>Sign in to manage the club.</h2>
+            <p>Use the Supabase Auth account added to the <code>admin_users</code> table. Access is checked again by the backend.</p>
+            <label>Email<input name="email" type="email" autocomplete="username" required /></label>
+            <label>Password<input name="password" type="password" autocomplete="current-password" required /></label>
+            <button class="primary" type="submit">Sign in <span>↗</span></button><div class="notice" id="login-notice" role="alert"></div>
+          </form>
+        </section>
+        <section id="dashboard" hidden>
+          <div class="stats" id="stats"></div>
+          <div class="content-header"><div><span class="eyebrow">CONTENT & COMMUNITY</span><h2 id="section-title">Overview</h2></div><div style="display:flex;gap:8px"><button class="ghost" id="export-button" type="button" hidden>Download CSV</button><button class="ghost" id="refresh-button" type="button">↻ Refresh</button></div></div>
+          <div id="page-notice" class="notice" role="status"></div>
+          <div class="table-card"><div class="table-scroll"><table><thead id="table-head"></thead><tbody id="table-body"></tbody></table></div></div>
+          <p class="hint">Return to the <a id="full-admin-link" href="http://localhost:3000">public Vulcan website</a>. Status updates and exports here are sent to the standalone backend API.</p>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

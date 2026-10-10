@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: vulcan-club-admin
+    runtime: node
+    rootDir: admin
+    region: singapore
+    plan: free
+    buildCommand: npm ci
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: API_BASE_URL
+        sync: false
+      - key: CLIENT_FRONTEND_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false

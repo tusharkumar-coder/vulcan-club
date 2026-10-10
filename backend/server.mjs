@@ -1,7 +1,21 @@
 import { createServer } from "node:http";
 import { URL } from "node:url";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
+
+const backendDirectory = path.dirname(fileURLToPath(import.meta.url));
+try {
+  const environment = readFileSync(path.join(backendDirectory, ".env"), "utf8");
+  for (const line of environment.split(/\r?\n/)) {
+    const match = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/);
+    if (!match || process.env[match[1]] !== undefined) continue;
+    const value = match[2].replace(/^(?:"(.*)"|'(.*)')$/, (_whole, doubleQuoted, singleQuoted) => doubleQuoted ?? singleQuoted);
+    process.env[match[1]] = value;
+  }
+} catch {}
 
 const port = Number(process.env.PORT || process.env.API_PORT || 4000);
 const allowedOrigins = new Set(
@@ -251,6 +265,48 @@ function invalidBody(response, schema, body, message = "Please review the submit
 
 app.get("/api/health", (_request, response) =>
   response.json({ service: "vulcan-club-api", status: "ok", supabaseConfigured: hasSupabaseConfig() }),
+);
+
+app.get(
+  "/api/admin/dashboard",
+  asyncRoute(async (request, response) => {
+    if (!(await requireAdmin(request, response))) return;
+    if (!hasSupabaseConfig())
+      return response.status(503).json({ error: "Backend Supabase credentials are not configured." });
+    const client = createAdminClient();
+    const [events, projects, domains, resources, team, leaderboardEntries, applications, messages, registrations] =
+      await Promise.all([
+        client.from("events").select("*").order("created_at", { ascending: false }).limit(100),
+        client.from("projects").select("*").order("created_at", { ascending: false }).limit(100),
+        client.from("domains").select("*").order("sort_order", { ascending: true }).limit(100),
+        client.from("resources").select("*").order("created_at", { ascending: false }).limit(100),
+        client.from("team_members").select("*").order("sort_order", { ascending: true }).limit(100),
+        client
+          .from("leaderboard_entries")
+          .select("*")
+          .order("contest_date", { ascending: false })
+          .order("points", { ascending: false })
+          .limit(500),
+        client.from("membership_applications").select("*").order("created_at", { ascending: false }).limit(100),
+        client.from("contact_messages").select("*").order("created_at", { ascending: false }).limit(100),
+        client.from("event_registrations").select("*").order("created_at", { ascending: false }).limit(200),
+      ]);
+    const failed = [events, projects, domains, resources, team, leaderboardEntries, applications, messages, registrations]
+      .find((result) => result.error);
+    if (failed?.error)
+      return response.status(500).json({ error: `Could not load admin dashboard: ${failed.error.message}` });
+    return response.json({
+      events: events.data ?? [],
+      projects: projects.data ?? [],
+      domains: domains.data ?? [],
+      resources: resources.data ?? [],
+      team: team.data ?? [],
+      leaderboardEntries: leaderboardEntries.data ?? [],
+      applications: applications.data ?? [],
+      messages: messages.data ?? [],
+      registrations: registrations.data ?? [],
+    });
+  }),
 );
 
 app.post(
