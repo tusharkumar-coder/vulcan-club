@@ -5,6 +5,9 @@ import { DataNote } from "@/components/data-note";
 import { ProjectDirectory } from "@/components/project-directory";
 import { getProjects } from "@/lib/data";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export const metadata: Metadata = {
   title: "Projects",
   description: "Explore software and experiments built by the Vulcan Club community.",

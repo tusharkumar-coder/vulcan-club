@@ -5,6 +5,9 @@ import { LeaderboardDirectory } from "@/components/leaderboard-directory";
 import { canonicalMetadata } from "@/lib/site-meta";
 import { getLeaderboardEntries } from "@/lib/data";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export const metadata: Metadata = {
   title: "Leaderboards & Results",
   description: "Track Vulcan Club contest results and student rankings across years.",

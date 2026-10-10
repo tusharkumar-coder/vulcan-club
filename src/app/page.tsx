@@ -20,6 +20,9 @@ import { getEvents, getProjects, getResources, getTeam } from "@/lib/data";
 import { domains } from "@/lib/domains";
 import { canonicalMetadata } from "@/lib/site-meta";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export const metadata: Metadata = {
   title: "Vulcan Club — Build together",
   description:

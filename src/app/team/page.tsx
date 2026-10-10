@@ -5,6 +5,9 @@ import { DataNote } from "@/components/data-note";
 import { TeamDirectory } from "@/components/team-directory";
 import { getTeam } from "@/lib/data";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export const metadata: Metadata = {
   title: "Team",
   description: "Meet the organizers, mentors, and contributors who make Vulcan Club possible.",
