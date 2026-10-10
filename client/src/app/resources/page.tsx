@@ -5,6 +5,9 @@ import { DataNote } from "@/components/data-note";
 import { ResourceDirectory } from "@/components/resource-directory";
 import { getResources } from "@/lib/data";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export const metadata: Metadata = {
   title: "Resources",
   description: "Notes, tutorials, guides, and tools curated by the Vulcan Club community.",

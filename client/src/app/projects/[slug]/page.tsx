@@ -8,6 +8,9 @@ import { getProject } from "@/lib/data";
 import { canonicalMetadata } from "@/lib/site-meta";
 
 type Props = { params: Promise<{ slug: string }> };
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const project = await getProject(slug);

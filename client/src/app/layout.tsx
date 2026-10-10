@@ -7,6 +7,9 @@ import { CursorGlow } from "@/components/cursor-glow";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export const metadata: Metadata = {
   ...(siteUrl ? { metadataBase: new URL(siteUrl) } : {}),
   title: { default: "Vulcan Club — Build together", template: "%s | Vulcan Club" },

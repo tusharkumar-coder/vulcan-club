@@ -9,6 +9,9 @@ import { getDomains } from "@/lib/data";
 import { Braces, Cpu, GitBranch, Layers3, Rocket, Terminal, Trophy } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export const metadata: Metadata = {
   title: "Domains",
   description: "Explore the technical domains and learning paths at Vulcan Club.",
