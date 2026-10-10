@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { getEvents, getProjects } from "@/lib/data";
+import { getEvents, getProjects, getTeam } from "@/lib/data";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
@@ -8,6 +8,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/about",
     "/domains",
     "/events",
+    "/leaderboards",
     "/projects",
     "/competitive-programming",
     "/team",
@@ -17,7 +18,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/privacy",
     "/terms",
   ];
-  const [events, projects] = await Promise.all([getEvents(), getProjects()]);
+  const [events, projects, team] = await Promise.all([getEvents(), getProjects(), getTeam()]);
   return [
     ...pages.map((path) => ({
       url: `${base}${path}`,
@@ -36,6 +37,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: new Date(),
       changeFrequency: "monthly" as const,
       priority: 0.6,
+    })),
+    ...team.records.map((member) => ({
+      url: `${base}/team/${member.slug}`,
+      lastModified: new Date(),
+      changeFrequency: "monthly" as const,
+      priority: 0.5,
     })),
   ];
 }

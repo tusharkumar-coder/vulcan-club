@@ -23,7 +23,10 @@ for (const path of pages) {
   const response = await fetch(`${base}${path}`);
   assert.equal(response.status, 200, `${path} should render`);
   const body = await response.text();
-  if (path === "/") assert.match(body, /WE FORGE/);
+  if (path === "/") {
+    assert.match(body, /Vulcan Club/);
+    assert.match(body, /A little practice goes a long way/);
+  }
   if (path === "/join") assert.match(body, /privacy notice/i);
   if (path === "/events") assert.match(body, /event/i);
 }

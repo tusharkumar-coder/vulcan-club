@@ -7,14 +7,16 @@ import { useState } from "react";
 
 const links = [
   ["Home", "/"],
-  ["About", "/about"],
-  ["Domains", "/domains"],
   ["Events", "/events"],
-  ["Projects", "/projects"],
-  ["Competitive Programming", "/competitive-programming"],
-  ["Team", "/team"],
+  ["Leaderboards", "/leaderboards"],
   ["Resources", "/resources"],
+  ["Team", "/team"],
+  ["Contact", "/contact"],
+  ["Coding Practice", "/competitive-programming"],
 ] as const;
+
+const isCurrentPage = (pathname: string, href: string) =>
+  href === "/" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
 
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
@@ -31,12 +33,16 @@ export function SiteHeader() {
           <span className="brand-mark" aria-hidden="true" />
           <span>
             <span className="brand-name">VULCAN</span>
-            <span className="brand-sub">Developer community</span>
+            <span className="brand-sub">Mirai School of Technology</span>
           </span>
         </Link>
         <nav className="nav-links" aria-label="Main navigation">
           {links.map(([label, href]) => (
-            <Link key={href} href={href} aria-current={pathname === href ? "page" : undefined}>
+            <Link
+              key={href}
+              href={href}
+              aria-current={isCurrentPage(pathname, href) ? "page" : undefined}
+            >
               {label}
             </Link>
           ))}
@@ -62,7 +68,7 @@ export function SiteHeader() {
             <Link
               key={href}
               href={href}
-              aria-current={pathname === href ? "page" : undefined}
+              aria-current={isCurrentPage(pathname, href) ? "page" : undefined}
               onClick={() => setOpen(false)}
             >
               {label}

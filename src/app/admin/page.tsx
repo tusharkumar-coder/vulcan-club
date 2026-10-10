@@ -79,6 +79,7 @@ export default async function AdminPage() {
     domains,
     resources,
     team,
+    leaderboardEntries,
     applications,
     messages,
     registrations,
@@ -93,6 +94,12 @@ export default async function AdminPage() {
     client.from("domains").select("*").order("sort_order", { ascending: true }).limit(100),
     client.from("resources").select("*").order("created_at", { ascending: false }).limit(100),
     client.from("team_members").select("*").order("sort_order", { ascending: true }).limit(100),
+    client
+      .from("leaderboard_entries")
+      .select("*")
+      .order("contest_date", { ascending: false })
+      .order("points", { ascending: false })
+      .limit(500),
     client
       .from("membership_applications")
       .select("*")
@@ -126,6 +133,7 @@ export default async function AdminPage() {
     domains,
     resources,
     team,
+    leaderboardEntries,
     applications,
     messages,
     registrations,
@@ -161,6 +169,7 @@ export default async function AdminPage() {
               domains: domains.data ?? [],
               resources: resources.data ?? [],
               team: team.data ?? [],
+              leaderboardEntries: leaderboardEntries.data ?? [],
               applications: applications.data ?? [],
               messages: messages.data ?? [],
               registrations: registrations.data ?? [],

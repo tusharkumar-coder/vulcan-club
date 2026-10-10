@@ -1,6 +1,6 @@
 # Vulcan Club
 
-The website for Vulcan Club, the developer community at Mirai School of Technology. It includes public pages for the club’s domains, events, projects, team, and resources; join/contact/event registration flows; a Supabase-backed admin dashboard; and a lazy-loaded Three.js hero.
+The website for Vulcan Club, the developer community at Mirai School of Technology. It includes public pages for the club’s domains, events, leaderboards, projects, team, and resources; join/contact/event registration flows; a Supabase-backed admin dashboard; and a lazy-loaded Three.js hero.
 
 The repository starts without real club content or external credentials. Public data shows a clear setup/empty state by default. Fictional preview records can be enabled locally with `USE_DEMO_DATA=true`; they are never used in production. No people, social accounts, event results, attendance figures, or project URLs have been invented as club facts.
 
@@ -90,6 +90,7 @@ Admin accounts should be provisioned directly by a trusted project owner; this s
 ## Content and forms
 
 - Events, projects, resources, domains, and visible team records are public only when published/visible. Private applications and contact messages are admin-only under RLS.
+- Contest standings are entered in Admin → Leaderboards & Results. Contest-wise tables sort by points; year-wise standings total published points for students in the selected academic year. The table intentionally stores only student display names, academic year, contest, and points.
 - Membership forms accept any valid email address; no school domain is assumed. Student ID is not collected.
 - Internal event registrations have a unique constraint on event ID plus case-insensitive email. If an event provides an external registration URL, the event page links to that destination instead.
 - Join and contact submissions require Supabase and return actionable errors if saving fails. Inputs are validated on the server with Zod.

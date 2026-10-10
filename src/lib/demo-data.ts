@@ -111,5 +111,6 @@ export const demoTeam: TeamMember[] = [
     role: "Example organizer",
     bio: "This fictional profile shows how organizer details will appear once the team is added.",
     interests: ["Community building", "Open source"],
+    skills: ["Community building", "Open source"],
   },
 ];

@@ -3,9 +3,11 @@
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
+import { LeaderboardManager } from "@/components/admin-leaderboard-manager";
 import type {
   DomainRecord,
   EventRecord,
+  LeaderboardEntry,
   ProjectRecord,
   ResourceRecord,
   TeamMember,
@@ -17,15 +19,19 @@ type AdminData = {
   projects: ProjectRecord[];
   resources: ResourceRecord[];
   team: TeamMember[];
+  leaderboardEntries: LeaderboardEntry[];
   applications: Record<string, unknown>[];
   messages: Record<string, unknown>[];
   registrations: Record<string, unknown>[];
   stats: Record<string, number>;
 };
-type ContentType = "events" | "projects" | "resources" | "team_members" | "domains";
+type ContentType =
+  "events" | "projects" | "resources" | "team_members" | "domains" | "leaderboard_entries";
+type ManagedContentSection = "events" | "projects" | "resources" | "team" | "domains";
 const sections = [
   "overview",
   "events",
+  "leaderboard",
   "projects",
   "domains",
   "resources",
@@ -49,8 +55,20 @@ export function AdminConsole({ data, email }: { data: AdminData; email?: string 
       headers: { "Content-Type": "application/json" },
       body: body ? JSON.stringify(body) : undefined,
     });
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error || "Action failed.");
+    const result = (await response.json()) as {
+      error?: string;
+      details?: {
+        fieldErrors?: Record<string, string[] | undefined>;
+        formErrors?: string[];
+      };
+    };
+    if (!response.ok) {
+      const fieldErrors = Object.entries(result.details?.fieldErrors ?? {}).flatMap(
+        ([field, messages]) => (messages ?? []).map((message) => `${field}: ${message}`),
+      );
+      const details = [...fieldErrors, ...(result.details?.formErrors ?? [])].join(" ");
+      throw new Error([result.error || "Action failed.", details].filter(Boolean).join(" "));
+    }
     return result;
   }
 
@@ -110,6 +128,7 @@ export function AdminConsole({ data, email }: { data: AdminData; email?: string 
       contributors: csv(raw.contributors),
       tags: csv(raw.tags),
       interests: csv(raw.interests),
+      skills: csv(raw.skills),
       is_visible: raw.is_visible === "on",
       is_published: raw.is_published === "on",
       sort_order: Number(raw.sort_order || 0),
@@ -135,7 +154,39 @@ export function AdminConsole({ data, email }: { data: AdminData; email?: string 
     }
   }
 
-  const label = section[0].toUpperCase() + section.slice(1);
+  async function saveLeaderboard(form: FormData, id?: string): Promise<boolean> {
+    const raw = Object.fromEntries(form.entries());
+    const record = {
+      contest_name: String(raw.contest_name ?? "").trim(),
+      contest_date: String(raw.contest_date ?? ""),
+      student_name: String(raw.student_name ?? "").trim(),
+      academic_year: String(raw.academic_year ?? ""),
+      points: Number(raw.points),
+      status: String(raw.status ?? "draft"),
+    };
+    setBusy(true);
+    setNotice("");
+    try {
+      await request(
+        "/api/admin/records",
+        id ? "PATCH" : "POST",
+        id ? { type: "leaderboard_entries", id, record } : { type: "leaderboard_entries", record },
+      );
+      setNotice(id ? "Leaderboard result updated." : "Leaderboard result added.");
+      router.refresh();
+      return true;
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Could not save leaderboard result.");
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const label =
+    section === "leaderboard"
+      ? "Leaderboards & Results"
+      : section[0].toUpperCase() + section.slice(1);
   return (
     <div className="admin-layout">
       <aside className="admin-side">
@@ -149,7 +200,9 @@ export function AdminConsole({ data, email }: { data: AdminData; email?: string 
               aria-current={section === tab ? "page" : undefined}
               onClick={() => setSection(tab)}
             >
-              {tab[0].toUpperCase() + tab.slice(1)}
+              {tab === "leaderboard"
+                ? "Leaderboards & Results"
+                : tab[0].toUpperCase() + tab.slice(1)}
             </button>
           ))}
         </nav>
@@ -207,7 +260,7 @@ export function AdminConsole({ data, email }: { data: AdminData; email?: string 
         )}
         {(["events", "projects", "domains", "resources", "team"] as string[]).includes(section) && (
           <ContentManager
-            section={section as ContentType}
+            section={section as ManagedContentSection}
             data={data}
             busy={busy}
             onSave={saveRecord}
@@ -222,6 +275,15 @@ export function AdminConsole({ data, email }: { data: AdminData; email?: string 
           <MessagesTable rows={data.messages} busy={busy} onUpdate={updateStatus} />
         )}
         {section === "registrations" && <RegistrationTable rows={data.registrations} />}
+        {section === "leaderboard" && (
+          <LeaderboardManager
+            entries={data.leaderboardEntries}
+            busy={busy}
+            onSave={saveLeaderboard}
+            onDelete={deleteRecord}
+            onStatus={updateStatus}
+          />
+        )}
       </div>
     </div>
   );
@@ -249,7 +311,7 @@ function ContentManager({
   onDelete,
   onStatus,
 }: {
-  section: ContentType;
+  section: ManagedContentSection;
   data: AdminData;
   busy: boolean;
   onSave: (type: ContentType, form: FormData, id?: string) => Promise<boolean>;
@@ -276,11 +338,12 @@ function ContentManager({
     DomainRecord | EventRecord | ProjectRecord | ResourceRecord | TeamMember
   )[];
   const title =
-    section === "team_members"
+    section === "team"
       ? "team member"
       : section === "domains"
         ? "domain"
         : section.slice(0, -1);
+  const recordType: ContentType = section === "team" ? "team_members" : section;
   const currentTitle = editing ? ("title" in editing ? editing.title : editing.name) : "";
   const currentDescription = editing
     ? "description" in editing
@@ -297,7 +360,7 @@ function ContentManager({
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
-    if (await onSave(section, new FormData(form), editing?.id)) {
+    if (await onSave(recordType, new FormData(form), editing?.id)) {
       form.reset();
       setEditing(null);
       setAssetUrl("");
@@ -333,7 +396,7 @@ function ContentManager({
         .normalize("NFKD")
         .replace(/[^a-zA-Z0-9._-]+/g, "-")
         .slice(0, 80);
-      const path = `${section === "team_members" ? "team" : section}/${crypto.randomUUID()}-${safeName}`;
+      const path = `${section === "team" ? "team" : section}/${crypto.randomUUID()}-${safeName}`;
       const storage = createBrowserClient(url, key).storage.from("club-assets");
       const { error } = await storage.upload(path, file, {
         cacheControl: "3600",
@@ -357,6 +420,11 @@ function ContentManager({
         <h3 style={{ fontFamily: "Space Grotesk", fontSize: 20, marginTop: 0 }}>
           {editing ? `Edit ${title}` : `Add ${title}`}
         </h3>
+        {section === "team" && (
+          <p className="field-hint admin-field-legend">
+            Required fields must be filled in. Optional fields can be left blank.
+          </p>
+        )}
         <form
           key={editing?.id ?? "new-record"}
           id="record-form"
@@ -364,26 +432,36 @@ function ContentManager({
           className="admin-form-grid"
         >
           <div className="field">
-            <label htmlFor="record-title">Title / name</label>
+            <label htmlFor="record-title">
+              Title / name
+              {section === "team" && <span className="field-label-state required">Required</span>}
+            </label>
             <input
               id="record-title"
-              name={section === "team_members" || section === "domains" ? "name" : "title"}
+              name={section === "team" || section === "domains" ? "name" : "title"}
               defaultValue={currentTitle}
               required
               maxLength={160}
             />
           </div>
           <div className="field">
-            <label htmlFor="record-slug">Slug</label>
+            <label htmlFor="record-slug">
+              Slug
+              {section === "team" && <span className="field-label-state required">Required</span>}
+            </label>
             <input
               id="record-slug"
               name="slug"
               defaultValue={editing?.slug ?? ""}
+              placeholder={section === "team" ? "e.g. jane-doe" : "lowercase-words-with-hyphens"}
               required
               maxLength={180}
             />
+            <span className="field-hint">
+              Use lowercase letters and numbers separated by hyphens, for example: jane-doe.
+            </span>
           </div>
-          {section !== "team_members" && section !== "domains" && (
+          {section !== "team" && section !== "domains" && (
             <div className="field">
               <label htmlFor="record-domain">Category / domain</label>
               <input
@@ -393,9 +471,11 @@ function ContentManager({
               />
             </div>
           )}
-          {section === "team_members" && (
+          {section === "team" && (
             <div className="field">
-              <label htmlFor="record-role">Role</label>
+              <label htmlFor="record-role">
+                Role <span className="field-label-state required">Required</span>
+              </label>
               <input
                 id="record-role"
                 name="role"
@@ -575,7 +655,10 @@ function ContentManager({
           )}
           {section !== "resources" && section !== "domains" && (
             <div className="field full">
-              <label htmlFor="asset-file">Cover / profile image</label>
+              <label htmlFor="asset-file">
+                Cover / profile image
+                {section === "team" && <span className="field-label-state">Optional</span>}
+              </label>
               <input
                 id="asset-file"
                 type="file"
@@ -590,7 +673,7 @@ function ContentManager({
               )}
               <input
                 aria-label="Public image URL"
-                name={section === "team_members" ? "image_url" : "cover_image_url"}
+                name={section === "team" ? "image_url" : "cover_image_url"}
                 type="url"
                 placeholder="Or paste a public image URL"
                 value={assetUrl}
@@ -598,10 +681,24 @@ function ContentManager({
               />
             </div>
           )}
-          {section === "team_members" && (
+          {section === "team" && (
             <>
               <div className="field">
-                <label htmlFor="record-interests">Interests (comma separated)</label>
+                <label htmlFor="record-skills">
+                  Skills (comma separated) <span className="field-label-state">Optional</span>
+                </label>
+                <input
+                  id="record-skills"
+                  name="skills"
+                  defaultValue={
+                    editing && "skills" in editing ? (editing.skills ?? []).join(", ") : ""
+                  }
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="record-interests">
+                  Interests (comma separated) <span className="field-label-state">Optional</span>
+                </label>
                 <input
                   id="record-interests"
                   name="interests"
@@ -611,7 +708,9 @@ function ContentManager({
                 />
               </div>
               <div className="field">
-                <label htmlFor="record-github">GitHub URL</label>
+                <label htmlFor="record-github">
+                  GitHub URL <span className="field-label-state">Optional</span>
+                </label>
                 <input
                   id="record-github"
                   name="github_url"
@@ -622,7 +721,9 @@ function ContentManager({
                 />
               </div>
               <div className="field">
-                <label htmlFor="record-linkedin">LinkedIn URL</label>
+                <label htmlFor="record-linkedin">
+                  LinkedIn URL <span className="field-label-state">Optional</span>
+                </label>
                 <input
                   id="record-linkedin"
                   name="linkedin_url"
@@ -633,7 +734,22 @@ function ContentManager({
                 />
               </div>
               <div className="field">
-                <label htmlFor="record-sort">Sort order</label>
+                <label htmlFor="record-instagram">
+                  Instagram URL <span className="field-label-state">Optional</span>
+                </label>
+                <input
+                  id="record-instagram"
+                  name="instagram_url"
+                  type="url"
+                  defaultValue={
+                    editing && "instagram_url" in editing ? (editing.instagram_url ?? "") : ""
+                  }
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="record-sort">
+                  Sort order <span className="field-label-state">Optional</span>
+                </label>
                 <input
                   id="record-sort"
                   name="sort_order"
@@ -653,11 +769,11 @@ function ContentManager({
                       : true
                   }
                 />
-                Visible on public team page
+                Visible on public team page <span className="field-label-state">Optional</span>
               </label>
             </>
           )}
-          {section !== "team_members" && section !== "domains" && (
+          {section !== "team" && section !== "domains" && (
             <div className="field">
               <label htmlFor="record-status">Status</label>
               <select
@@ -672,12 +788,15 @@ function ContentManager({
             </div>
           )}
           <div className="field full">
-            <label htmlFor="record-description">Description / bio</label>
+            <label htmlFor="record-description">
+              Description / bio
+              {section === "team" && <span className="field-label-state">Optional</span>}
+            </label>
             <textarea
               id="record-description"
-              name={section === "team_members" ? "bio" : "description"}
+              name={section === "team" ? "bio" : "description"}
               defaultValue={currentDescription}
-              required={section !== "team_members"}
+              required={section !== "team"}
               rows={3}
             />
           </div>
@@ -736,7 +855,7 @@ function ContentManager({
                 {rows.map((item) => {
                   const rowTitle = "title" in item ? item.title : item.name;
                   const status =
-                    section === "team_members"
+                    section === "team"
                       ? "is_visible" in item && item.is_visible
                         ? "visible"
                         : "hidden"
@@ -748,7 +867,7 @@ function ContentManager({
                           ? item.status
                           : "draft";
                   const statusPatch =
-                    section === "team_members"
+                    section === "team"
                       ? { is_visible: status !== "visible" }
                       : section === "domains"
                         ? { is_published: status !== "published" }
@@ -784,14 +903,14 @@ function ContentManager({
                         <button
                           className="admin-action"
                           disabled={busy}
-                          onClick={() => onStatus(section, item.id, statusPatch)}
+                          onClick={() => onStatus(recordType, item.id, statusPatch)}
                         >
                           {status === "published" || status === "visible" ? "Unpublish" : "Publish"}
                         </button>
                         <button
                           className="admin-action danger"
                           disabled={busy}
-                          onClick={() => onDelete(section, item.id)}
+                          onClick={() => onDelete(recordType, item.id)}
                         >
                           Delete
                         </button>
