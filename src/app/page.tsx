@@ -15,6 +15,7 @@ import { CodingPractice } from "@/components/coding-practice";
 import { DataNote } from "@/components/data-note";
 import { LiveCodeEditor } from "@/components/live-code-editor";
 import { TechNewsFeed } from "@/components/tech-news-feed";
+import { ForgeExperience } from "@/components/forge-experience";
 import { getEvents, getProjects, getResources, getTeam } from "@/lib/data";
 import { domains } from "@/lib/domains";
 import { canonicalMetadata } from "@/lib/site-meta";
@@ -81,6 +82,7 @@ export default async function HomePage() {
     <div className="home-page">
       <section className="club-hero">
         <div className="club-hero-stars" aria-hidden="true" />
+        <ForgeExperience />
         <div className="shell club-hero-inner">
           <div className="club-kicker mono">
             <span className="club-kicker-mark" aria-hidden="true" />

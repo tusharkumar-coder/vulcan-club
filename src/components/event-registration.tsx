@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { apiUrl } from "@/lib/api-url";
 
 export function EventRegistration({
   eventId,
@@ -16,11 +17,12 @@ export function EventRegistration({
   const [loading, setLoading] = useState(false);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const formEl = event.currentTarget;
     setLoading(true);
     setState({ kind: "idle", message: "" });
-    const form = new FormData(event.currentTarget);
+    const form = new FormData(formEl);
     try {
-      const response = await fetch("/api/event-registration", {
+      const response = await fetch(apiUrl("/api/event-registration"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -34,9 +36,9 @@ export function EventRegistration({
       if (!response.ok) throw new Error(result.error || "Registration could not be completed.");
       setState({
         kind: "success",
-        message: "You’re registered. Check your inbox for any event updates.",
+        message: "You're registered. Check your inbox for any event updates.",
       });
-      event.currentTarget.reset();
+      formEl.reset();
     } catch (error) {
       setState({
         kind: "error",

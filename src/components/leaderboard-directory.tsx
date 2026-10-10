@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowDownUp, Award, CalendarDays, Trophy } from "lucide-react";
+import { ArrowDownUp, Award, CalendarDays, Download, Search, Trophy } from "lucide-react";
 import type { LeaderboardEntry } from "@/lib/types";
 
 const years: LeaderboardEntry["academic_year"][] = [
@@ -24,6 +24,8 @@ const formatDate = (value: string) =>
 export function LeaderboardDirectory({ entries }: { entries: LeaderboardEntry[] }) {
   const [view, setView] = useState<"contest" | "year">("contest");
   const [selectedYear, setSelectedYear] = useState<LeaderboardEntry["academic_year"]>(years[0]);
+  const [searchQuery, setSearchQuery] = useState("");
+
   const contests = useMemo(() => {
     const unique = new Map<string, LeaderboardEntry>();
     for (const entry of entries) unique.set(contestKey(entry), entry);
@@ -72,6 +74,52 @@ export function LeaderboardDirectory({ entries }: { entries: LeaderboardEntry[] 
     return [...totals.values()].sort((a, b) => b.points - a.points || a.name.localeCompare(b.name));
   }, [entries, selectedYear]);
 
+  const activeRawRows = useMemo(() => {
+    if (view === "contest") {
+      return contestRows.map((entry) => ({
+        name: entry.student_name,
+        year: entry.academic_year,
+        points: Number(entry.points),
+        detail: "",
+      }));
+    }
+    return yearRows.map((row) => ({
+      name: row.name,
+      year: row.year,
+      points: row.points,
+      detail: `${row.contests.size} ${row.contests.size === 1 ? "contest" : "contests"}`,
+    }));
+  }, [view, contestRows, yearRows]);
+
+  const filteredRows = useMemo(() => {
+    if (!searchQuery.trim()) return activeRawRows;
+    const q = searchQuery.toLowerCase().trim();
+    return activeRawRows.filter((row) => row.name.toLowerCase().includes(q));
+  }, [activeRawRows, searchQuery]);
+
+  const handleExportCsv = () => {
+    const headers = ["Rank", "Student", "Year", "Scope", "Points"];
+    const lines = [headers.join(",")];
+    filteredRows.forEach((row, index) => {
+      lines.push(
+        [
+          index + 1,
+          `"${row.name.replaceAll('"', '""')}"`,
+          `"${row.year}"`,
+          `"${row.detail || "This contest"}"`,
+          row.points,
+        ].join(","),
+      );
+    });
+    const blob = new Blob([lines.join("\r\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `vulcan-standings-${view}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   if (!entries.length) {
     return (
       <div className="leaderboard-empty">
@@ -101,7 +149,10 @@ export function LeaderboardDirectory({ entries }: { entries: LeaderboardEntry[] 
           role="tab"
           aria-selected={view === "contest"}
           className={view === "contest" ? "active" : ""}
-          onClick={() => setView("contest")}
+          onClick={() => {
+            setView("contest");
+            setSearchQuery("");
+          }}
         >
           <Trophy size={15} /> Contest-wise
         </button>
@@ -110,72 +161,189 @@ export function LeaderboardDirectory({ entries }: { entries: LeaderboardEntry[] 
           role="tab"
           aria-selected={view === "year"}
           className={view === "year" ? "active" : ""}
-          onClick={() => setView("year")}
+          onClick={() => {
+            setView("year");
+            setSearchQuery("");
+          }}
         >
           <ArrowDownUp size={15} /> Year-wise
         </button>
       </div>
 
       {view === "contest" ? (
-        <>
-          <div className="leaderboard-filter-row">
-            <label className="field">
-              <span>Choose a contest</span>
-              <select
-                value={activeContest}
-                onChange={(event) => setSelectedContest(event.target.value)}
-              >
-                {contests.map((contest) => (
-                  <option key={contest.key} value={contest.key}>
-                    {contest.name} · {formatDate(contest.date)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {contests.find((contest) => contest.key === activeContest) && (
-              <span className="leaderboard-date">
-                <CalendarDays size={14} />
-                {formatDate(contests.find((contest) => contest.key === activeContest)!.date)}
-              </span>
-            )}
-          </div>
-          <StandingsTable
-            rows={contestRows.map((entry) => ({
-              name: entry.student_name,
-              year: entry.academic_year,
-              points: Number(entry.points),
-              detail: "",
-            }))}
-            empty="No published results for this contest yet."
-          />
-        </>
+        <div className="leaderboard-filter-row">
+          <label className="field">
+            <span>Choose a contest</span>
+            <select
+              value={activeContest}
+              onChange={(event) => {
+                setSelectedContest(event.target.value);
+                setSearchQuery("");
+              }}
+            >
+              {contests.map((contest) => (
+                <option key={contest.key} value={contest.key}>
+                  {contest.name} · {formatDate(contest.date)}
+                </option>
+              ))}
+            </select>
+          </label>
+          {contests.find((contest) => contest.key === activeContest) && (
+            <span className="leaderboard-date">
+              <CalendarDays size={14} />
+              {formatDate(contests.find((contest) => contest.key === activeContest)!.date)}
+            </span>
+          )}
+        </div>
       ) : (
-        <>
-          <div className="leaderboard-year-filters" aria-label="Filter by academic year">
-            {years.map((year) => (
-              <button
-                type="button"
-                key={year}
-                aria-pressed={selectedYear === year}
-                className={selectedYear === year ? "active" : ""}
-                onClick={() => setSelectedYear(year)}
-              >
-                {year}
-              </button>
-            ))}
-          </div>
-          <StandingsTable
-            rows={yearRows.map((row) => ({
-              name: row.name,
-              year: row.year,
-              points: row.points,
-              detail: `${row.contests.size} ${row.contests.size === 1 ? "contest" : "contests"}`,
-            }))}
-            showYear={false}
-            empty={`No published points for ${selectedYear} yet.`}
-          />
-        </>
+        <div className="leaderboard-year-filters" aria-label="Filter by academic year">
+          {years.map((year) => (
+            <button
+              type="button"
+              key={year}
+              aria-pressed={selectedYear === year}
+              className={selectedYear === year ? "active" : ""}
+              onClick={() => {
+                setSelectedYear(year);
+                setSearchQuery("");
+              }}
+            >
+              {year}
+            </button>
+          ))}
+        </div>
       )}
+
+      {/* Podium spotlight for top 3 participants */}
+      {activeRawRows.length >= 3 && !searchQuery && (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+            gap: 14,
+            margin: "20px 0 16px",
+          }}
+          aria-label="Contest top performers"
+        >
+          {activeRawRows.slice(0, 3).map((item, idx) => {
+            const colors = ["#ffd700", "#c0c0c0", "#cd7f32"];
+            const titles = ["1st Place · Gold", "2nd Place · Silver", "3rd Place · Bronze"];
+            return (
+              <div
+                key={item.name}
+                style={{
+                  border: `1px solid ${idx === 0 ? "rgba(255, 215, 0, 0.45)" : "rgba(103, 217, 238, 0.22)"}`,
+                  background:
+                    idx === 0
+                      ? "linear-gradient(145deg, rgba(255, 215, 0, 0.08), rgba(13, 23, 39, 0.8))"
+                      : "linear-gradient(145deg, rgba(23, 39, 62, 0.5), rgba(11, 20, 34, 0.8))",
+                  borderRadius: 14,
+                  padding: "16px 18px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 6,
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <span
+                    className="micro mono"
+                    style={{ color: colors[idx], letterSpacing: "0.08em", fontWeight: 700 }}
+                  >
+                    {titles[idx]}
+                  </span>
+                  <Award size={16} style={{ color: colors[idx] }} />
+                </div>
+                <strong style={{ fontSize: 16, color: "#eaf5ff" }}>{item.name}</strong>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginTop: 4,
+                  }}
+                >
+                  <span className="tag" style={{ fontSize: 10, padding: "2px 8px" }}>
+                    {item.year}
+                  </span>
+                  <span
+                    className="mono"
+                    style={{ color: "var(--cyan)", fontWeight: 700, fontSize: 13 }}
+                  >
+                    {item.points.toLocaleString("en-IN")} pts
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Search and Export Bar */}
+      <div
+        style={{
+          display: "flex",
+          gap: 12,
+          flexWrap: "wrap",
+          alignItems: "center",
+          justifyContent: "space-between",
+          margin: "18px 0 12px",
+        }}
+      >
+        <div style={{ position: "relative", flex: 1, minWidth: 220, maxWidth: 360 }}>
+          <Search
+            size={14}
+            style={{
+              position: "absolute",
+              left: 12,
+              top: "50%",
+              transform: "translateY(-50%)",
+              color: "#8996aa",
+            }}
+          />
+          <input
+            aria-label="Search student by name"
+            placeholder="Search student name…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "9px 12px 9px 34px",
+              background: "rgba(16, 29, 48, 0.7)",
+              border: "1px solid rgba(40, 67, 93, 0.6)",
+              borderRadius: 8,
+              color: "#eaf5ff",
+              fontSize: 13,
+            }}
+          />
+        </div>
+        <button
+          type="button"
+          onClick={handleExportCsv}
+          className="button button-secondary"
+          style={{ padding: "8px 14px", fontSize: 12, display: "inline-flex", gap: 6 }}
+        >
+          <Download size={13} /> Export Standings (CSV)
+        </button>
+      </div>
+
+      <StandingsTable
+        rows={filteredRows}
+        showYear={view === "contest"}
+        empty={
+          searchQuery
+            ? `No students matching "${searchQuery}".`
+            : view === "contest"
+              ? "No published results for this contest yet."
+              : `No published points for ${selectedYear} yet.`
+        }
+      />
+
       <p className="leaderboard-footnote">
         Rankings show results that organizers have chosen to publish. Tied point totals share the
         same rank.
@@ -194,13 +362,21 @@ function StandingsTable({
   showYear?: boolean;
 }) {
   if (!rows.length) return <div className="leaderboard-empty compact">{empty}</div>;
-  let previousPoints: number | undefined;
-  let rank = 0;
-  const ranked = rows.map((row, index) => {
-    if (row.points !== previousPoints) rank = index + 1;
-    previousPoints = row.points;
-    return { ...row, rank };
-  });
+  const ranked = rows.reduce<
+    {
+      name: string;
+      year: LeaderboardEntry["academic_year"];
+      points: number;
+      detail: string;
+      rank: number;
+    }[]
+  >((acc, row) => {
+    const prev = acc[acc.length - 1];
+    const rank = prev && row.points === prev.points ? prev.rank : acc.length + 1;
+    acc.push({ ...row, rank });
+    return acc;
+  }, []);
+
   return (
     <div className="leaderboard-table-wrap">
       <table className="leaderboard-table">
@@ -216,8 +392,8 @@ function StandingsTable({
           </tr>
         </thead>
         <tbody>
-          {ranked.map((row) => (
-            <tr key={`${row.name}-${row.year}`}>
+          {ranked.map((row, index) => (
+            <tr key={`${row.name}-${row.year}-${row.points}-${index}`}>
               <td>
                 <span className={`leaderboard-rank ${row.rank <= 3 ? "top" : ""}`}>
                   {row.rank <= 3 && <Award size={14} aria-hidden="true" />}#{row.rank}

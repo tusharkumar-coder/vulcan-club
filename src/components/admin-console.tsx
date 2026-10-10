@@ -4,6 +4,8 @@ import { useState, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import { LeaderboardManager } from "@/components/admin-leaderboard-manager";
+import { apiUrl } from "@/lib/api-url";
+import { getApiAuthHeaders } from "@/lib/api-auth";
 import type {
   DomainRecord,
   EventRecord,
@@ -50,9 +52,9 @@ export function AdminConsole({ data, email }: { data: AdminData; email?: string 
   const router = useRouter();
 
   async function request(path: string, method: string, body?: unknown) {
-    const response = await fetch(path, {
+    const response = await fetch(apiUrl(path), {
       method,
-      headers: { "Content-Type": "application/json" },
+      headers: { ...(body ? { "Content-Type": "application/json" } : {}), ...(await getApiAuthHeaders()) },
       body: body ? JSON.stringify(body) : undefined,
     });
     const result = (await response.json()) as {
@@ -286,6 +288,46 @@ export function AdminConsole({ data, email }: { data: AdminData; email?: string 
         )}
       </div>
     </div>
+  );
+}
+
+function CsvExport({ type, label }: { type: "applications" | "registrations"; label: string }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function download() {
+    setBusy(true);
+    setError("");
+    try {
+      const response = await fetch(apiUrl(`/api/admin/export?type=${type}`), {
+        headers: await getApiAuthHeaders(),
+      });
+      if (!response.ok) {
+        const result = (await response.json()) as { error?: string };
+        throw new Error(result.error || "Could not export this CSV.");
+      }
+      const fileUrl = URL.createObjectURL(await response.blob());
+      const link = document.createElement("a");
+      link.href = fileUrl;
+      link.download = `vulcan-${type}.csv`;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(fileUrl);
+    } catch (downloadError) {
+      setError(downloadError instanceof Error ? downloadError.message : "Could not export this CSV.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <span style={{ display: "inline-flex", flexDirection: "column", alignItems: "flex-start" }}>
+      <button className="text-link" type="button" disabled={busy} onClick={download}>
+        {busy ? "Preparing CSV…" : `${label} ↓`}
+      </button>
+      {error && <span className="field-error">{error}</span>}
+    </span>
   );
 }
 
@@ -836,9 +878,7 @@ function ContentManager({
             Published and draft records
           </h3>
           {section === "events" && (
-            <a className="text-link" href="/api/admin/export?type=registrations">
-              Export registrations ↓
-            </a>
+            <CsvExport type="registrations" label="Export registrations" />
           )}
         </div>
         {rows.length ? (
@@ -964,9 +1004,7 @@ function ApplicationsTable({
               <option value="rejected">Rejected</option>
             </select>
           </label>
-          <a className="text-link" href="/api/admin/export?type=applications">
-            Export CSV ↓
-          </a>
+          <CsvExport type="applications" label="Export CSV" />
         </div>
       </div>
       {filteredRows.length ? (
@@ -1128,9 +1166,7 @@ function RegistrationTable({ rows }: { rows: Record<string, unknown>[] }) {
         <h3 style={{ fontFamily: "Space Grotesk", fontSize: 19, margin: 0 }}>
           Event registrations
         </h3>
-        <a className="text-link" href="/api/admin/export?type=registrations">
-          Export CSV ↓
-        </a>
+        <CsvExport type="registrations" label="Export CSV" />
       </div>
       {rows.length ? (
         <div className="table-scroll">

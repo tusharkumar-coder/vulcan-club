@@ -17,9 +17,10 @@ The repository starts without real club content or external credentials. Public 
 ## Project layout
 
 ```text
-src/app/                 Public routes, API handlers, metadata routes
+src/app/                 Public routes, Next.js API fallback handlers, metadata routes
 src/components/          Shared navigation, directories, forms, admin UI, 3D scene
 src/lib/                 Data access, schemas, types, Supabase and admin auth
+backend/server.mjs       Separate Node.js API server for local form/admin requests
 supabase/migrations/     Re-creatable database schema and RLS policies
 supabase/seed.sql        Optional domain-directory seed data
 ```
@@ -32,15 +33,23 @@ supabase/seed.sql        Optional domain-directory seed data
 
 ## Install and run locally (macOS)
 
-From the `vulcan-club` directory:
+From the `vulcan-club` directory, run the backend API in one Terminal tab:
 
 ```bash
 npm install
 cp .env.example .env.local
-npm run dev
+npm run dev:api
 ```
 
-Open <http://localhost:3000>. Without Supabase configured, public directories show helpful setup and empty states. The join, contact, and internal event registration forms return a real configuration error instead of pretending data was saved.
+In a second Terminal tab, from the same `vulcan-club` directory, run the frontend:
+
+```bash
+npm run dev:frontend
+```
+
+The frontend runs at <http://localhost:3000>; the separate API runs at <http://localhost:4000> (health check: <http://localhost:4000/api/health>). Leave both terminal processes running while using the site. The API accepts frontend requests from `FRONTEND_ORIGINS`; its default is `http://localhost:3000`.
+
+Without Supabase configured, public directories show helpful setup and empty states. The join, contact, and internal event registration forms return a real configuration error instead of pretending data was saved. The frontend’s server-rendered public pages continue to read published data directly from Supabase; form submissions and admin write/export requests use the separate API server during local development.
 
 To view explicitly fictional visual preview records, set `USE_DEMO_DATA=true` in `.env.local` and restart the dev server. The records are labeled as preview content. This option is ignored in production.
 
@@ -69,7 +78,7 @@ To view explicitly fictional visual preview records, set `USE_DEMO_DATA=true` in
 
    `db push` applies the SQL migration in `supabase/migrations`. The optional seed contains only the domain directory defined in the project brief; it does not create sample people, events, projects, or performance figures. For local Supabase development, `npx supabase start` and `npx supabase db reset` apply migrations and the configured seed.
 
-5. Restart Next.js after changing environment variables. The public directories query Supabase with the anon key and RLS. Server form handlers use the service-role key to insert private submissions after validation and rate checks.
+5. Restart both local servers after changing environment variables. The public directories query Supabase with the anon key and RLS. The API server uses the service-role key to save private submissions and perform protected admin operations after validation and rate checks.
 
 ## Create the first administrator
 
@@ -116,7 +125,7 @@ Supabase integration flows (database writes, RLS, Auth, duplicate registration) 
 2. Add `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SITE_URL`, and any verified public contact/social links under **Project Settings → Environment Variables**. Set the service-role key for server runtime only. Set `USE_DEMO_DATA=false`.
 3. Apply the migration to the intended Supabase project with `npx supabase link --project-ref YOUR_PROJECT_REF` and `npx supabase db push`.
 4. Add the production Vercel domain to Supabase Auth **URL Configuration → Site URL** and allowed redirect URLs. Set `NEXT_PUBLIC_SITE_URL` to the canonical `https://` domain in Vercel.
-5. Redeploy after changing environment variables. Verify public pages, an actual form submission, admin sign-in, and published records on the production deployment.
+5. Redeploy after changing environment variables. The local API server is not deployed by Vercel as a long-running server. Keep `NEXT_PUBLIC_API_BASE_URL` unset on Vercel to use the included Next.js API route fallback, or deploy `backend/server.mjs` to a Node host and set `NEXT_PUBLIC_API_BASE_URL` to that API URL plus `FRONTEND_ORIGINS` to the production site origin. Verify public pages, a form submission, admin sign-in, and published records on the production deployment.
 
 ## Troubleshooting
 

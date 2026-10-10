@@ -1,6 +1,15 @@
 type Bucket = { count: number; resetAt: number };
 const buckets = new Map<string, Bucket>();
 
+if (typeof setInterval !== "undefined") {
+  setInterval(() => {
+    const now = Date.now();
+    for (const [key, bucket] of buckets.entries()) {
+      if (bucket.resetAt <= now) buckets.delete(key);
+    }
+  }, 5 * 60 * 1000).unref?.();
+}
+
 // A lightweight per-instance guard. For horizontally scaled production deployments,
 // replace this with a shared limiter (for example Upstash) so limits span all instances.
 export function rateLimit(key: string, limit: number, windowMs: number) {

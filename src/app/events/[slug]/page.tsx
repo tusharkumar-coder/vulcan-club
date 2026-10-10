@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, CalendarDays, MapPin } from "lucide-react";
 import { PageHero } from "@/components/page-hero";
 import { EventRegistration } from "@/components/event-registration";
-import { getEvent, getEvents } from "@/lib/data";
+import { getEvent } from "@/lib/data";
 import { canonicalMetadata } from "@/lib/site-meta";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function EventDetailPage({ params }: Props) {
   const { slug } = await params;
-  const [event, all] = await Promise.all([getEvent(slug), getEvents()]);
+  const event = await getEvent(slug);
   if (!event) notFound();
   const date = new Date(event.starts_at);
   const preview = event.id.startsWith("demo-");

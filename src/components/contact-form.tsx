@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { contactSchema, type ContactFormValues } from "@/lib/schemas";
+import { apiUrl } from "@/lib/api-url";
 
 export function ContactForm() {
   const [notice, setNotice] = useState<{ kind: "success" | "error"; text: string } | null>(null);
@@ -16,7 +17,7 @@ export function ContactForm() {
   const submit = async (values: ContactFormValues) => {
     setNotice(null);
     try {
-      const response = await fetch("/api/contact", {
+      const response = await fetch(apiUrl("/api/contact"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(values),
@@ -160,7 +161,7 @@ export function ContactForm() {
           <input id="contact-website" tabIndex={-1} autoComplete="off" {...register("website")} />
         </div>
       </div>
-      <button className="button form-submit contact-code-submit" disabled={isSubmitting}>
+      <button className="button form-submit contact-code-submit" type="submit" disabled={isSubmitting}>
         <span>{isSubmitting ? "Vulcan.sendMessage(...)" : "Vulcan.sendMessage(userDetails)"}</span>
         <span aria-hidden="true">↗</span>
       </button>

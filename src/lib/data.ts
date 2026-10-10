@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { demoEvents, demoProjects, demoResources, demoTeam } from "@/lib/demo-data";
 import { createPublicClient, hasPublicSupabaseConfig } from "@/lib/supabase";
 import type {
@@ -42,52 +43,57 @@ async function readPublished<T>(
   }
 }
 
-export const getEvents = () =>
+export const getEvents = cache(() =>
   readPublished<EventRecord>("events", demoEvents, (client) =>
     client
       .from("events")
       .select("*")
       .eq("status", "published")
       .order("starts_at", { ascending: true }),
-  );
-export const getProjects = () =>
+  ),
+);
+
+export const getProjects = cache(() =>
   readPublished<ProjectRecord>("projects", demoProjects, (client) =>
     client
       .from("projects")
       .select("*")
       .eq("status", "published")
       .order("created_at", { ascending: false }),
-  );
-export const getResources = () =>
+  ),
+);
+
+export const getResources = cache(() =>
   readPublished<ResourceRecord>("resources", demoResources, (client) =>
     client
       .from("resources")
       .select("*")
       .eq("status", "published")
       .order("created_at", { ascending: false }),
-  );
-export const getTeam = () =>
+  ),
+);
+
+export const getTeam = cache(() =>
   readPublished<TeamMember>("team_members", demoTeam, (client) =>
     client
       .from("team_members")
       .select("*")
       .eq("is_visible", true)
       .order("sort_order", { ascending: true }),
-  );
-export async function getTeamMember(slug: string) {
-  const result = await getTeam();
-  return result.records.find((member) => member.slug === slug) ?? null;
-}
-export const getDomains = () =>
+  ),
+);
+
+export const getDomains = cache(() =>
   readPublished<DomainRecord>("domains", [], (client) =>
     client
       .from("domains")
       .select("*")
       .eq("is_published", true)
       .order("sort_order", { ascending: true }),
-  );
+  ),
+);
 
-export const getLeaderboardEntries = () =>
+export const getLeaderboardEntries = cache(() =>
   readPublished<LeaderboardEntry>("leaderboard entries", [], (client) =>
     client
       .from("leaderboard_entries")
@@ -95,14 +101,59 @@ export const getLeaderboardEntries = () =>
       .eq("status", "published")
       .order("contest_date", { ascending: false })
       .order("points", { ascending: false }),
-  );
+  ),
+);
 
-export async function getEvent(slug: string) {
-  const result = await getEvents();
-  return result.records.find((event) => event.slug === slug) ?? null;
-}
+export const getEvent = cache(async (slug: string): Promise<EventRecord | null> => {
+  if (!hasPublicSupabaseConfig()) {
+    return demoEnabled() ? (demoEvents.find((event) => event.slug === slug) ?? null) : null;
+  }
+  try {
+    const { data, error } = await createPublicClient()
+      .from("events")
+      .select("*")
+      .eq("status", "published")
+      .eq("slug", slug)
+      .maybeSingle();
+    if (error || !data) return null;
+    return data as EventRecord;
+  } catch {
+    return null;
+  }
+});
 
-export async function getProject(slug: string) {
-  const result = await getProjects();
-  return result.records.find((project) => project.slug === slug) ?? null;
-}
+export const getProject = cache(async (slug: string): Promise<ProjectRecord | null> => {
+  if (!hasPublicSupabaseConfig()) {
+    return demoEnabled() ? (demoProjects.find((project) => project.slug === slug) ?? null) : null;
+  }
+  try {
+    const { data, error } = await createPublicClient()
+      .from("projects")
+      .select("*")
+      .eq("status", "published")
+      .eq("slug", slug)
+      .maybeSingle();
+    if (error || !data) return null;
+    return data as ProjectRecord;
+  } catch {
+    return null;
+  }
+});
+
+export const getTeamMember = cache(async (slug: string): Promise<TeamMember | null> => {
+  if (!hasPublicSupabaseConfig()) {
+    return demoEnabled() ? (demoTeam.find((member) => member.slug === slug) ?? null) : null;
+  }
+  try {
+    const { data, error } = await createPublicClient()
+      .from("team_members")
+      .select("*")
+      .eq("is_visible", true)
+      .eq("slug", slug)
+      .maybeSingle();
+    if (error || !data) return null;
+    return data as TeamMember;
+  } catch {
+    return null;
+  }
+});

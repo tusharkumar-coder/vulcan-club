@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { joinSchema, type JoinFormValues } from "@/lib/schemas";
+import { apiUrl } from "@/lib/api-url";
 
 const interestOptions = [
   "Competitive programming & DSA",
@@ -34,7 +35,7 @@ export function JoinForm({ initialInterest }: { initialInterest?: string }) {
   const submit = async (values: JoinFormValues) => {
     setNotice(null);
     try {
-      const response = await fetch("/api/join", {
+      const response = await fetch(apiUrl("/api/join"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(values),

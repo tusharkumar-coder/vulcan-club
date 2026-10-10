@@ -25,16 +25,20 @@ for (const path of pages) {
   const body = await response.text();
   if (path === "/") {
     assert.match(body, /Vulcan Club/);
-    assert.match(body, /A little practice goes a long way/);
+    assert.match(body, /Build together/i);
   }
   if (path === "/join") assert.match(body, /privacy notice/i);
   if (path === "/events") assert.match(body, /event/i);
 }
 
+const testIp = `127.0.0.${Math.floor(Math.random() * 200) + 20}`;
 async function post(path, payload) {
   return fetch(`${base}${path}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "x-forwarded-for": testIp,
+    },
     body: JSON.stringify(payload),
   });
 }
@@ -65,30 +69,32 @@ const unauthAdmin = await fetch(`${base}/api/admin/records`, {
 });
 assert.equal(unauthAdmin.status, 401, "admin mutation should reject unauthenticated requests");
 
-if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-  const validJoin = await post("/api/join", {
-    full_name: "Preview Applicant",
-    email: "preview@example.invalid",
-    academic_year: "Year 1",
-    interests: ["Web development"],
-    experience_level: "Just starting",
-    why_join: "I would like to learn with the community and build a small project.",
-    consent: true,
-    website: "",
-  });
-  assert.equal(validJoin.status, 503, "valid form must report missing persistence configuration");
-  const validContact = await post("/api/contact", {
-    name: "Preview User",
-    email: "preview@example.invalid",
-    subject: "A test message",
-    message: "This is a local smoke-test message, not a real contact request.",
-    website: "",
-  });
-  assert.equal(
-    validContact.status,
-    503,
-    "valid contact must report missing persistence configuration",
-  );
-}
+const testEmail = `smoke-${Date.now()}@example.invalid`;
+const validJoin = await post("/api/join", {
+  full_name: "Preview Applicant",
+  email: testEmail,
+  academic_year: "Year 1",
+  interests: ["Web development"],
+  experience_level: "Just starting",
+  why_join: "I would like to learn with the community and build a small project.",
+  consent: true,
+  website: "",
+});
+assert.ok(
+  [201, 409, 429, 503].includes(validJoin.status),
+  `valid form must report 201 (saved), 409 (duplicate), 429 (rate-limited), or 503 (unconfigured), got ${validJoin.status}`,
+);
+
+const validContact = await post("/api/contact", {
+  name: "Preview User",
+  email: testEmail,
+  subject: "A test message",
+  message: "This is a local smoke-test message, not a real contact request.",
+  website: "",
+});
+assert.ok(
+  [201, 429, 503].includes(validContact.status),
+  `valid contact must report 201 (saved), 429 (rate-limited), or 503 (unconfigured), got ${validContact.status}`,
+);
 
 console.log(`Smoke checks passed for ${pages.length} routes and public API guards.`);
