@@ -5,6 +5,9 @@ import { AdminConsole } from "@/components/admin-console";
 import { getAdminState } from "@/lib/admin-auth";
 import { createAdminClient } from "@/lib/supabase";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export const metadata: Metadata = {
   title: "Admin dashboard",
   robots: { index: false, follow: false },
