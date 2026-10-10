@@ -31,7 +31,7 @@ export function SiteFooter() {
               <span className="brand-mark" aria-hidden="true" />
               <span>
                 <span className="brand-name">VULCAN</span>
-                <span className="brand-sub">Developer community</span>
+                <span className="brand-sub">Mirai School of Technology</span>
               </span>
             </Link>
             <p className="muted" style={{ maxWidth: 270, fontSize: 12, marginTop: 18 }}>

@@ -65,9 +65,19 @@ const teamRecord = z.object({
   interests: z.array(z.string().trim().min(1).max(80)).max(20),
   github_url: optionalUrl,
   linkedin_url: optionalUrl,
+  instagram_url: optionalUrl,
+  skills: z.array(z.string().trim().min(1).max(80)).max(30),
   image_url: optionalUrl,
   is_visible: z.boolean(),
   sort_order: z.number().int().min(0).max(10000),
+});
+const leaderboardRecord = z.object({
+  contest_name: z.string().trim().min(2).max(180),
+  contest_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Enter a contest date."),
+  student_name: z.string().trim().min(2).max(120),
+  academic_year: z.enum(["1st Year", "2nd Year", "3rd Year", "4th Year", "Other"]),
+  points: z.number().min(0).max(10000000),
+  status,
 });
 const domainRecord = z.object({
   name: z.string().trim().min(2).max(120),
@@ -84,6 +94,7 @@ const updateOnly = {
   resources: resourceRecord.partial(),
   team_members: teamRecord.partial(),
   domains: domainRecord.partial(),
+  leaderboard_entries: leaderboardRecord.partial(),
 };
 
 async function authorized() {
@@ -103,7 +114,14 @@ export async function POST(request: NextRequest) {
   }
   const envelope = z
     .object({
-      type: z.enum(["events", "projects", "resources", "team_members", "domains"]),
+      type: z.enum([
+        "events",
+        "projects",
+        "resources",
+        "team_members",
+        "domains",
+        "leaderboard_entries",
+      ]),
       record: z.unknown(),
     })
     .safeParse(body);
@@ -117,7 +135,9 @@ export async function POST(request: NextRequest) {
           ? resourceRecord
           : envelope.data.type === "team_members"
             ? teamRecord
-            : domainRecord;
+            : envelope.data.type === "leaderboard_entries"
+              ? leaderboardRecord
+              : domainRecord;
   const parsed = schema.safeParse(envelope.data.record);
   if (!parsed.success)
     return NextResponse.json(
@@ -140,7 +160,9 @@ export async function POST(request: NextRequest) {
   if (error)
     return errorResponse(
       error.code === "23505"
-        ? "That slug is already in use."
+        ? envelope.data.type === "leaderboard_entries"
+          ? "A result for this student is already recorded for that contest and date."
+          : "That slug is already in use."
         : `Could not create record: ${error.message}`,
       error.code === "23505" ? 409 : 500,
     );
@@ -163,6 +185,7 @@ export async function PATCH(request: NextRequest) {
         "resources",
         "team_members",
         "domains",
+        "leaderboard_entries",
         "membership_applications",
         "contact_messages",
       ]),
@@ -215,7 +238,14 @@ export async function DELETE(request: NextRequest) {
   }
   const envelope = z
     .object({
-      type: z.enum(["events", "projects", "resources", "team_members", "domains"]),
+      type: z.enum([
+        "events",
+        "projects",
+        "resources",
+        "team_members",
+        "domains",
+        "leaderboard_entries",
+      ]),
       id: z.string().uuid(),
     })
     .safeParse(body);

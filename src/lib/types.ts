@@ -55,9 +55,21 @@ export type TeamMember = {
   role: string;
   bio?: string | null;
   interests: string[];
+  skills?: string[] | null;
   image_url?: string | null;
   github_url?: string | null;
   linkedin_url?: string | null;
+  instagram_url?: string | null;
+};
+
+export type LeaderboardEntry = {
+  id: string;
+  contest_name: string;
+  contest_date: string;
+  student_name: string;
+  academic_year: "1st Year" | "2nd Year" | "3rd Year" | "4th Year" | "Other";
+  points: number;
+  status: "draft" | "published" | "archived";
 };
 
 export type DataResult<T> = {

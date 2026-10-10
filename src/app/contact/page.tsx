@@ -19,20 +19,20 @@ export default function ContactPage() {
   return (
     <>
       <PageHero
-        eyebrow="Say hello / Contact"
-        title="Have a question, an idea, or a useful link?"
-        description="Send a note to the Vulcan Club organizers. We’ll make sure your message reaches the right people."
+        eyebrow="// contact"
+        title="Initialize Connection"
+        description="Send a message to the Vulcan Club organizers. We’ll make sure it reaches the right people."
       />
       <section className="section">
         <div className="shell form-shell">
           <aside className="form-intro">
-            <div className="eyebrow mono">Get in touch</div>
+            <div className="eyebrow mono">const destination = &quot;Vulcan Club&quot;;</div>
             <h2 className="section-heading" style={{ fontSize: "clamp(2rem,3.4vw,3rem)" }}>
-              Let’s start with a conversation.
+              Your next idea starts here.
             </h2>
             <p className="section-copy" style={{ fontSize: 14 }}>
-              Use the form to ask about events, collaboration, membership, or anything you’re
-              curious about.
+              Ask about events, collaboration, membership, or anything you’re curious about. The
+              club team will get back to you by email.
             </p>
             {process.env.NEXT_PUBLIC_CLUB_EMAIL && (
               <p>
@@ -56,7 +56,7 @@ export default function ContactPage() {
               </div>
             )}
           </aside>
-          <div className="admin-panel">
+          <div className="contact-console">
             <ContactForm />
           </div>
         </div>

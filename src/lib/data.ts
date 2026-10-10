@@ -4,6 +4,7 @@ import type {
   DataResult,
   DomainRecord,
   EventRecord,
+  LeaderboardEntry,
   ProjectRecord,
   ResourceRecord,
   TeamMember,
@@ -73,6 +74,10 @@ export const getTeam = () =>
       .eq("is_visible", true)
       .order("sort_order", { ascending: true }),
   );
+export async function getTeamMember(slug: string) {
+  const result = await getTeam();
+  return result.records.find((member) => member.slug === slug) ?? null;
+}
 export const getDomains = () =>
   readPublished<DomainRecord>("domains", [], (client) =>
     client
@@ -80,6 +85,16 @@ export const getDomains = () =>
       .select("*")
       .eq("is_published", true)
       .order("sort_order", { ascending: true }),
+  );
+
+export const getLeaderboardEntries = () =>
+  readPublished<LeaderboardEntry>("leaderboard entries", [], (client) =>
+    client
+      .from("leaderboard_entries")
+      .select("id, contest_name, contest_date, student_name, academic_year, points, status")
+      .eq("status", "published")
+      .order("contest_date", { ascending: false })
+      .order("points", { ascending: false }),
   );
 
 export async function getEvent(slug: string) {
